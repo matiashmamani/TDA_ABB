@@ -1,6 +1,7 @@
 #ifndef _ABB_H
 #define _ABB_H
 
+#include <stddef.h>
 #include <stdbool.h>
 
 struct abb;
