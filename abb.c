@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <string.h>
 #include "abb.h"
+#include "pila.h"
 
 typedef struct nodo {
 	char* clave;
@@ -15,8 +16,14 @@ typedef struct nodo {
 struct abb {
 	nodo_t* raiz;
 	size_t cantidad;
-    abb_comparar_clave_t cmp;
+    	abb_comparar_clave_t cmp;
 	abb_destruir_dato_t destruir_dato;
+};
+
+
+struct abb_iter {
+	pila_t* pila;
+	const abb_t* arbol;
 };
 
 // Función para uso interno
@@ -118,16 +125,101 @@ void abb_destruir(abb_t *arbol){
 }
 
 /* *****************************************************************
+ *                    AUXILIARES DEL ITERADOR EXTERNO
+ * *****************************************************************/
+bool __abb_iterar(nodo_t *nodo, bool visitar(const char *, void *, void *), void *extra){
+	if(!nodo)
+		return false;
+
+	if(!__abb_iterar(nodo->izq, visitar, extra))
+		return false;
+	
+	if(!visitar(nodo->clave, nodo->dato, extra))
+		return false;	
+	
+	return __abb_iterar(nodo->der, visitar, extra);
+}
+
+bool __apilar_nodos_izquierdos(pila_t* pila, nodo_t* nodo) {
+
+	if(!nodo) 
+		return false;
+		
+	pila_apilar(pila,nodo);
+	return __apilar_nodos_izquierdos(pila,nodo->izq);
+}
+/* *****************************************************************
  *                   PRIMITIVAS DEL ITERADOR INTERNO
  * *****************************************************************/
 
-// ....
+void abb_in_order(abb_t *arbol, bool visitar(const char *, void *, void *), void *extra){	
+	__abb_iterar(arbol->raiz, visitar, extra);
+}
 
 /* *****************************************************************
  *                    PRIMITIVAS DEL ITERADOR EXTERNO
  * *****************************************************************/
 
-// ....
+abb_iter_t *abb_iter_in_crear(const abb_t *arbol){
+
+
+	abb_iter_t* iter = malloc(sizeof(abb_iter_t));
+
+	if(!iter) 
+		return NULL;
+
+	pila_t * pila = pila_crear();
+
+	if(!pila){
+		free(iter); 
+		return NULL;
+	}
+	
+	//apilar_izquierdos
+	if(!__apilar_nodos_izquierdos(pila,arbol->raiz)){
+		free(iter);
+		pila_destruir(pila);
+		return NULL;
+	}
+	
+	iter->arbol = arbol;
+	iter->pila = pila;
+	return iter;	
+}
+
+bool abb_iter_in_al_final(const abb_iter_t *iter){
+
+	return pila_esta_vacia(iter->pila);
+}
+
+bool abb_iter_in_avanzar(abb_iter_t *iter){
+
+	//esta al final? 
+	if(abb_iter_in_al_final(iter))
+		return false;
+	
+	//desapilar
+	//Si desapilo izq apilo a der y todo a la izquierda
+	nodo_t* nodo_actual = pila_desapilar(iter->pila);
+	
+	return __apilar_nodos_izquierdos(iter->pila,nodo_actual->der);
+}
+const char *abb_iter_in_ver_actual(const abb_iter_t *iter){
+	
+	if(abb_iter_in_al_final(iter))
+		return NULL;
+
+	nodo_t* nodo = (nodo_t*)pila_ver_tope(iter->pila);
+	
+	return nodo->clave;
+}
+
+void abb_iter_in_destruir(abb_iter_t* iter){
+
+	pila_destruir(iter->pila);
+	free(iter);
+}
+
 
  /* *****************************************************************
  *                    FUNCIONES AUXILIARES
@@ -146,7 +238,7 @@ nodo_t* __abb_crear_nodo(const char* clave, void* dato){
 		return NULL;
 	}
 
-	nodo_nuevo->clave = clave_duplicada;
+    nodo_nuevo->clave = clave_duplicada;
     nodo_nuevo->dato = dato;
     nodo_nuevo->izq = NULL;
     nodo_nuevo->der = NULL;

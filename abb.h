@@ -6,6 +6,7 @@
 
 struct abb;
 typedef struct abb abb_t;
+typedef struct abb_iter abb_iter_t;
 
 // Tipo de función para comparar dentro del ABB
 typedef int (*abb_comparar_clave_t) (const char *, const char *);
