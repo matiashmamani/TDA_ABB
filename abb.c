@@ -143,11 +143,15 @@ bool __abb_iterar(nodo_t *nodo, bool visitar(const char *, void *, void *), void
 bool __apilar_nodos_izquierdos(pila_t* pila, nodo_t* nodo) {
 
 	if(!nodo) 
+		return true;
+		
+	if(!pila_apilar(pila,nodo))
 		return false;
 		
-	pila_apilar(pila,nodo);
 	return __apilar_nodos_izquierdos(pila,nodo->izq);
 }
+
+
 /* *****************************************************************
  *                   PRIMITIVAS DEL ITERADOR INTERNO
  * *****************************************************************/
@@ -175,6 +179,7 @@ abb_iter_t *abb_iter_in_crear(const abb_t *arbol){
 		return NULL;
 	}
 	
+
 	//apilar_izquierdos
 	if(!__apilar_nodos_izquierdos(pila,arbol->raiz)){
 		free(iter);
@@ -204,6 +209,7 @@ bool abb_iter_in_avanzar(abb_iter_t *iter){
 	
 	return __apilar_nodos_izquierdos(iter->pila,nodo_actual->der);
 }
+
 const char *abb_iter_in_ver_actual(const abb_iter_t *iter){
 	
 	if(abb_iter_in_al_final(iter))
