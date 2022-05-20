@@ -129,7 +129,7 @@ void abb_destruir(abb_t *arbol){
  * *****************************************************************/
 bool __abb_iterar(nodo_t *nodo, bool visitar(const char *, void *, void *), void *extra){
 	if(!nodo)
-		return false;
+		return true;
 
 	if(!__abb_iterar(nodo->izq, visitar, extra))
 		return false;
