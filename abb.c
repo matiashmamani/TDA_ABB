@@ -16,17 +16,16 @@ typedef struct nodo {
 struct abb {
 	nodo_t* raiz;
 	size_t cantidad;
-    	abb_comparar_clave_t cmp;
+    abb_comparar_clave_t cmp;
 	abb_destruir_dato_t destruir_dato;
 };
-
 
 struct abb_iter {
 	pila_t* pila;
 	const abb_t* arbol;
 };
 
-// Función para uso interno
+// Funciones auxiliares
 nodo_t* __abb_crear_nodo(const char* clave, void* dato);
 
 void* __abb_destruir_nodo(nodo_t* nodo);
@@ -34,6 +33,17 @@ void* __abb_destruir_nodo(nodo_t* nodo);
 nodo_t* __abb_buscar_nodo(const char* clave, nodo_t* nodo, nodo_t** padre, abb_comparar_clave_t cmp);
 
 void __abb_destruir_wrapper(nodo_t* nodo, abb_destruir_dato_t destruir_dato);
+
+void* __abb_borrar_sin_hijos(abb_t* arbol, nodo_t* nodo, nodo_t* padre);
+
+void* __abb_borrar_un_hijo(abb_t* arbol, nodo_t* nodo, nodo_t* padre);
+
+void* __abb_borrar_dos_hijos(abb_t* arbol, nodo_t* nodo, nodo_t* padre);
+
+// Funciones auxiliares para el ITERADOR INTERNO
+bool __abb_iterar(nodo_t *nodo, bool visitar(const char *, void *, void *), void *extra);
+
+bool __apilar_nodos_izquierdos(pila_t* pila, nodo_t* nodo);
 
 /* *****************************************************************
  *                    PRIMITIVAS DEL ABB
@@ -92,7 +102,28 @@ bool abb_guardar(abb_t *arbol, const char *clave, void *dato){
 
 void* abb_borrar(abb_t *arbol, const char *clave){
     
-    return NULL;
+    nodo_t* padre = NULL;
+    nodo_t* nodo = __abb_buscar_nodo(clave, arbol->raiz, &padre, arbol->cmp);
+
+    if(!nodo) return NULL;
+
+    void* dato = NULL;
+
+    if(!nodo->izq && !nodo->der){
+        // Nodo sin hijos
+        dato = __abb_borrar_sin_hijos(arbol, nodo, padre);
+        return dato;    
+    }
+    
+    if(nodo->izq && nodo->der){
+        // Nodo tiene dos hijos
+        dato = __abb_borrar_dos_hijos(arbol, nodo, padre);
+        return dato;
+    }
+
+    // Nodo tiene un solo hijo
+    dato = __abb_borrar_un_hijo(arbol, nodo, padre);
+    return dato;
 }
 
 void* abb_obtener(const abb_t *arbol, const char *clave){
@@ -125,39 +156,12 @@ void abb_destruir(abb_t *arbol){
 }
 
 /* *****************************************************************
- *                    AUXILIARES DEL ITERADOR EXTERNO
- * *****************************************************************/
-bool __abb_iterar(nodo_t *nodo, bool visitar(const char *, void *, void *), void *extra){
-	if(!nodo)
-		return true;
-
-	if(!__abb_iterar(nodo->izq, visitar, extra))
-		return false;
-	
-	if(!visitar(nodo->clave, nodo->dato, extra))
-		return false;	
-	
-	return __abb_iterar(nodo->der, visitar, extra);
-}
-
-bool __apilar_nodos_izquierdos(pila_t* pila, nodo_t* nodo) {
-
-	if(!nodo) 
-		return true;
-		
-	if(!pila_apilar(pila,nodo))
-		return false;
-		
-	return __apilar_nodos_izquierdos(pila,nodo->izq);
-}
-
-
-/* *****************************************************************
  *                   PRIMITIVAS DEL ITERADOR INTERNO
  * *****************************************************************/
 
 void abb_in_order(abb_t *arbol, bool visitar(const char *, void *, void *), void *extra){	
-	__abb_iterar(arbol->raiz, visitar, extra);
+	
+    __abb_iterar(arbol->raiz, visitar, extra);
 }
 
 /* *****************************************************************
@@ -165,7 +169,6 @@ void abb_in_order(abb_t *arbol, bool visitar(const char *, void *, void *), void
  * *****************************************************************/
 
 abb_iter_t *abb_iter_in_crear(const abb_t *arbol){
-
 
 	abb_iter_t* iter = malloc(sizeof(abb_iter_t));
 
@@ -226,7 +229,6 @@ void abb_iter_in_destruir(abb_iter_t* iter){
 	free(iter);
 }
 
-
  /* *****************************************************************
  *                    FUNCIONES AUXILIARES
  * *****************************************************************/
@@ -283,6 +285,7 @@ nodo_t* __abb_buscar_nodo(const char* clave, nodo_t* nodo, nodo_t** padre, abb_c
 void __abb_destruir_wrapper(nodo_t* nodo, abb_destruir_dato_t destruir_dato){
     
     // Wrapper para cambiar la firma a nivel nodo en vez de nivel árbol
+
     // Destrucción POST-ORDER
 
     if(!nodo) return;
@@ -294,4 +297,121 @@ void __abb_destruir_wrapper(nodo_t* nodo, abb_destruir_dato_t destruir_dato){
     void* dato = __abb_destruir_nodo(nodo);
 
     if(destruir_dato) destruir_dato(dato);
+}
+
+void* __abb_borrar_sin_hijos(abb_t* arbol, nodo_t* nodo, nodo_t* padre){
+    
+    // Si padre es NULL, entonces nodo a borrar es raiz (corrijo raiz)
+    // Sino, corrijo el padre
+    if(!padre){
+        arbol->raiz = NULL;   
+    } else {
+        // Valido que nodo a izq o der del padre debo actualizar
+        // Tengo que validar el puntero != NULL y que la clave coincida
+        if(padre->izq && !arbol->cmp(nodo->clave, padre->izq->clave)){
+            padre->izq = NULL;
+        } else {
+            padre->der = NULL;
+        }
+    }
+
+    arbol->cantidad--;
+
+    void* dato = __abb_destruir_nodo(nodo);
+
+    return dato;
+}
+
+void* __abb_borrar_un_hijo(abb_t* arbol, nodo_t* nodo, nodo_t* padre){
+
+    nodo_t* hijo = NULL;
+
+    if(nodo->izq){
+        hijo = nodo->izq;
+    } else {
+        hijo = nodo->der;
+    }
+
+    // Si padre es NULL, entonces nodo a borrar es raiz (corrijo raiz)
+    // Sino, corrijo el padre
+    if(!padre){
+        arbol->raiz = hijo;
+    } else {
+        // Valido que nodo a izq o der del padre debo actualizar
+        // Tengo que validar el puntero != NULL y que la clave coincida
+        if(padre->izq && !arbol->cmp(nodo->clave, padre->izq->clave)){
+            padre->izq = hijo;
+        } else {
+            padre->der = hijo;
+        }
+    }
+    
+    arbol->cantidad--;
+
+    void* dato = __abb_destruir_nodo(nodo);
+
+    return dato;
+}
+
+void* __abb_borrar_dos_hijos(abb_t* arbol, nodo_t* nodo, nodo_t* padre){
+
+    /* A) BUSCO EL NODO AUXILIAR REEMPLAZANTE: */
+
+    // Un hijo para la der y luego hijos subsecuentes para la izq
+    nodo_t* padre_aux = nodo;
+    nodo_t* nodo_aux = nodo->der;
+    
+    while(nodo_aux->izq){
+        padre_aux = nodo_aux;
+        nodo_aux = nodo_aux->izq;
+    }
+
+    /* B) GUARDO CLAVE DEL NODO AUXILIAR REEMPLAZANTE */
+    char* clave_aux = strdup(nodo_aux->clave);
+
+    /* C) BORRO EL NODO AUXILIAR REEMPLAZANTE */
+    void* dato = NULL;
+    void* dato_aux = NULL;
+
+    if(nodo_aux->der){
+        // Nodo aux tiene un solo hijo
+        dato_aux = __abb_borrar_un_hijo(arbol, nodo_aux, padre_aux);
+    } else {
+        // Nodo aux sin hijos
+        dato_aux = __abb_borrar_sin_hijos(arbol, nodo_aux, padre_aux);    
+    }
+
+    dato = nodo->dato;
+
+    /* D) PISO AL NODO ORIGINAL CON EL NODO AUXILIAR REEMPLAZANTE */
+
+    free(nodo->clave);  // Liberar clave duplicada con strdup(...)
+    nodo->clave = clave_aux;
+    nodo->dato = dato_aux;
+
+    return dato;    
+}
+
+/* *****************************************************************
+ *                    AUXILIARES DEL ITERADOR EXTERNO
+ * *****************************************************************/
+ 
+bool __abb_iterar(nodo_t *nodo, bool visitar(const char *, void *, void *), void *extra){
+	
+    if(!nodo) return false;
+
+	if(!__abb_iterar(nodo->izq, visitar, extra)) return false;
+	
+	if(!visitar(nodo->clave, nodo->dato, extra)) return false;	
+	
+	return __abb_iterar(nodo->der, visitar, extra);
+}
+
+bool __apilar_nodos_izquierdos(pila_t* pila, nodo_t* nodo) {
+
+	if(!nodo) return false;
+		
+	pila_apilar(pila,nodo);
+
+	return __apilar_nodos_izquierdos(pila,nodo->izq);
 }
