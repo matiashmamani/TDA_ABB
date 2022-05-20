@@ -172,8 +172,7 @@ abb_iter_t *abb_iter_in_crear(const abb_t *arbol){
 
 	abb_iter_t* iter = malloc(sizeof(abb_iter_t));
 
-	if(!iter) 
-		return NULL;
+	if(!iter) return NULL;
 
 	pila_t * pila = pila_crear();
 
@@ -182,7 +181,6 @@ abb_iter_t *abb_iter_in_crear(const abb_t *arbol){
 		return NULL;
 	}
 	
-
 	//apilar_izquierdos
 	if(!__apilar_nodos_izquierdos(pila,arbol->raiz)){
 		free(iter);
@@ -203,8 +201,7 @@ bool abb_iter_in_al_final(const abb_iter_t *iter){
 bool abb_iter_in_avanzar(abb_iter_t *iter){
 
 	//esta al final? 
-	if(abb_iter_in_al_final(iter))
-		return false;
+	if(abb_iter_in_al_final(iter)) return false;
 	
 	//desapilar
 	//Si desapilo izq apilo a der y todo a la izquierda
@@ -215,8 +212,7 @@ bool abb_iter_in_avanzar(abb_iter_t *iter){
 
 const char *abb_iter_in_ver_actual(const abb_iter_t *iter){
 	
-	if(abb_iter_in_al_final(iter))
-		return NULL;
+	if(abb_iter_in_al_final(iter)) return NULL;
 
 	nodo_t* nodo = (nodo_t*)pila_ver_tope(iter->pila);
 	
@@ -367,9 +363,11 @@ void* __abb_borrar_dos_hijos(abb_t* arbol, nodo_t* nodo, nodo_t* padre){
     }
 
     /* B) GUARDO CLAVE DEL NODO AUXILIAR REEMPLAZANTE */
+
     char* clave_aux = strdup(nodo_aux->clave);
 
     /* C) BORRO EL NODO AUXILIAR REEMPLAZANTE */
+    
     void* dato = NULL;
     void* dato_aux = NULL;
 
@@ -398,7 +396,7 @@ void* __abb_borrar_dos_hijos(abb_t* arbol, nodo_t* nodo, nodo_t* padre){
  
 bool __abb_iterar(nodo_t *nodo, bool visitar(const char *, void *, void *), void *extra){
 	
-    if(!nodo) return false;
+    if(!nodo) return true;
 
 	if(!__abb_iterar(nodo->izq, visitar, extra)) return false;
 	
@@ -409,9 +407,9 @@ bool __abb_iterar(nodo_t *nodo, bool visitar(const char *, void *, void *), void
 
 bool __apilar_nodos_izquierdos(pila_t* pila, nodo_t* nodo) {
 
-	if(!nodo) return false;
+	if(!nodo) return true;
 		
-	pila_apilar(pila,nodo);
+	if(!pila_apilar(pila, nodo)) return false;
 
-	return __apilar_nodos_izquierdos(pila,nodo->izq);
+	return __apilar_nodos_izquierdos(pila, nodo->izq);
 }

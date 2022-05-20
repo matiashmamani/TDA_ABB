@@ -146,7 +146,7 @@ static void prueba_abb_iterar()
     abb_iter_t* iter = abb_iter_in_crear(abb);
 
     const char *clave;
-    size_t indice;
+    ssize_t indice;
 
     print_test("Prueba abb iterador esta al final, es false", !abb_iter_in_al_final(iter));
 
@@ -248,7 +248,7 @@ static void prueba_abb_iterar_volumen(size_t largo)
     abb_destruir(abb);
 }
 
-bool concatenar_datos(const char* clave, void* elemento, void* extra) {
+bool concatenar_claves(const char* clave, void* elemento, void* extra) {
 
     const char* cadena = clave;
 
@@ -260,7 +260,7 @@ static void prueba_abb_iterador_interno(){
 
 	int tamanio = 15;
 	char* abc_desord[] = {"m","g","t","d","k","q","w","a","e","h","l","p","s","u","z"};
-	char cadena[16]="";
+	char cadena[16] = "";
 	char* cadena_inorder = "adeghklmpqstuwz";
 
 	printf("- PRUEBAS ABB ITERADOR INTERNO\n");
@@ -268,28 +268,76 @@ static void prueba_abb_iterador_interno(){
 	
 	bool ok = true;
 	size_t i;
-	for (i = 0; i < tamanio; i++) {;
-    		ok &= abb_guardar(abb, abc_desord[i],&i);
-    	}
-    	print_test("Se guardaron todos los elementos correctamente", ok);
+	for(i = 0; i < tamanio; i++){
+        ok &= abb_guardar(abb, abc_desord[i], &i);
+    }
+    
+    print_test("Prueba abb se guardaron todos los elementos desordenados correctamente", ok);
 
-	printf("La cadena inorder es %s \n",cadena_inorder);
+    // Pruebo iterar con el iterador interno.
+    abb_in_order(abb, concatenar_claves, cadena);
+    print_test("Prueba abb cadena concatenada igual a cadena inorder 'adeghklmpqstuwz'", !strcmp(cadena, cadena_inorder));
 
-    	// Pruebo iterar con el iterador interno.
-    	abb_in_order(abb, concatenar_datos, cadena);
-    	printf("La cadena inorder es %s \n",cadena_inorder);
-	printf("La cadena concatenada es %s \n",cadena);
-
-    	print_test("La cadena concatenada es igual a la cadena inorder", strcmp(cadena, cadena_inorder) == 0);
-
-    	abb_destruir(abb); 
+    abb_destruir(abb); 
 }  
 
+static void prueba_abb_borrar(){
+ 
+    int tamanio = 15;
+    char* abc_desord[] = {"m","g","t","d","k","q","w","a","e","h","l","p","s","u","z"};
+    char cadena[16] = "";
+    char cadena2[16] = "";
+    char cadena3[16] = "";
+    char cadena4[16] = "";
+    char cadena5[16] = "";
+
+    printf("- PRUEBAS ABB BORRAR\n");
+    abb_t* abb = abb_crear(strcmp, NULL);
+
+    bool ok = true;
+    size_t i;
+    for(i = 0; i < tamanio; i++) {
+        ok &= abb_guardar(abb, abc_desord[i], &i);
+    }
+
+    print_test("Prueba abb se guardaron todos los elementos desordenados correctamente", ok);
+    print_test("Prueba abb la cantidad de elementos es 15", abb_cantidad(abb) == 15);
+
+    print_test("Prueba abb borrar 'g'", abb_borrar(abb, "g") == &i);
+    print_test("Prueba abb la cantidad de elementos es 14", abb_cantidad(abb) == 14);
+    abb_in_order(abb, concatenar_claves, cadena);
+    print_test("Prueba abb cadena concatenada inorder es 'adehklmpqstuwz'", !strcmp(cadena, "adehklmpqstuwz"));
+
+    print_test("Prueba abb borrar 'p'", abb_borrar(abb, "p") == &i);
+    print_test("Prueba abb la cantidad de elementos es 13", abb_cantidad(abb) == 13);
+    abb_in_order(abb, concatenar_claves, cadena2);
+    print_test("Prueba abb cadena concatenada inorder es 'adehklmqstuwz'", !strcmp(cadena2, "adehklmqstuwz"));
+
+    print_test("Prueba abb borrar 'm'", abb_borrar(abb, "m") == &i);
+    print_test("Prueba abb la cantidad de elementos es 12", abb_cantidad(abb) == 12);
+    abb_in_order(abb, concatenar_claves, cadena3);
+    print_test("Prueba abb cadena concatenada inorder es 'adehklqstuwz'", !strcmp(cadena3, "adehklqstuwz"));
+
+    print_test("Prueba abb insertar 'v'", abb_guardar(abb, "v", &i));
+    print_test("Prueba abb la cantidad de elementos es 13", abb_cantidad(abb) == 13);
+    abb_in_order(abb, concatenar_claves, cadena4);
+    print_test("Prueba abb cadena concatenada inorder es 'adehklqstuvwz'", !strcmp(cadena4, "adehklqstuvwz"));
+
+    print_test("Prueba abb borrar 't'", abb_borrar(abb, "t") == &i);
+    print_test("Prueba abb la cantidad de elementos es 12", abb_cantidad(abb) == 12);
+    abb_in_order(abb, concatenar_claves, cadena5);
+    print_test("Prueba abb cadena concatenada inorder es 'adehklqsuvwz'", !strcmp(cadena5, "adehklqsuvwz"));
+
+    abb_destruir(abb);    
+}
+
 void pruebas_abb_estudiante() {
+    
     prueba_crear_abb_vacio();
     prueba_abb_insertar();
     prueba_abb_reemplazar();
     prueba_abb_reemplazar_con_destruir();
+    prueba_abb_borrar();
     prueba_abb_iterar();
     prueba_abb_iterar_volumen(500);
     prueba_abb_iterador_interno();
