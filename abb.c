@@ -182,6 +182,7 @@ abb_iter_t *abb_iter_in_crear(const abb_t *arbol){
 		return NULL;
 	}
 	
+
 	//apilar_izquierdos
 	if(!__apilar_nodos_izquierdos(pila,arbol->raiz)){
 		free(iter);
