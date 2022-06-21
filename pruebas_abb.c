@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "abb.h"
+#include "pila.h"
 #include "testing.h"
 #include <unistd.h>  // For ssize_t in Linux.
 
@@ -281,7 +282,7 @@ static void prueba_abb_iterador_interno(){
     abb_destruir(abb); 
 }  
 
-static void prueba_abb_borrar(){
+static void prueba_abb_borrar_dos_hijos(){
  
     int tamanio = 15;
     char* abc_desord[] = {"m","g","t","d","k","q","w","a","e","h","l","p","s","u","z"};
@@ -291,7 +292,7 @@ static void prueba_abb_borrar(){
     char cadena4[16] = "";
     char cadena5[16] = "";
 
-    printf("- PRUEBAS ABB BORRAR\n");
+    printf("- PRUEBAS ABB BORRAR CON DOS HIJOS\n");
     abb_t* abb = abb_crear(strcmp, NULL);
 
     bool ok = true;
@@ -303,30 +304,193 @@ static void prueba_abb_borrar(){
     print_test("Prueba abb se guardaron todos los elementos desordenados correctamente", ok);
     print_test("Prueba abb la cantidad de elementos es 15", abb_cantidad(abb) == 15);
 
-    print_test("Prueba abb borrar 'g'", abb_borrar(abb, "g") == &i);
+    print_test("Prueba abb borrar elemento 'g' con dos hijos", abb_borrar(abb, "g") == &i);
     print_test("Prueba abb la cantidad de elementos es 14", abb_cantidad(abb) == 14);
     abb_in_order(abb, concatenar_claves, cadena);
     print_test("Prueba abb cadena concatenada inorder es 'adehklmpqstuwz'", !strcmp(cadena, "adehklmpqstuwz"));
 
-    print_test("Prueba abb borrar 'p'", abb_borrar(abb, "p") == &i);
+    print_test("Prueba abb borrar elemento 'p' sin hijos", abb_borrar(abb, "p") == &i);
     print_test("Prueba abb la cantidad de elementos es 13", abb_cantidad(abb) == 13);
     abb_in_order(abb, concatenar_claves, cadena2);
     print_test("Prueba abb cadena concatenada inorder es 'adehklmqstuwz'", !strcmp(cadena2, "adehklmqstuwz"));
 
-    print_test("Prueba abb borrar 'm'", abb_borrar(abb, "m") == &i);
+    print_test("Prueba abb borrar elemento 'm' con dos hijos", abb_borrar(abb, "m") == &i);
     print_test("Prueba abb la cantidad de elementos es 12", abb_cantidad(abb) == 12);
     abb_in_order(abb, concatenar_claves, cadena3);
     print_test("Prueba abb cadena concatenada inorder es 'adehklqstuwz'", !strcmp(cadena3, "adehklqstuwz"));
 
-    print_test("Prueba abb insertar 'v'", abb_guardar(abb, "v", &i));
+    print_test("Prueba abb insertar elemento 'v'", abb_guardar(abb, "v", &i));
     print_test("Prueba abb la cantidad de elementos es 13", abb_cantidad(abb) == 13);
     abb_in_order(abb, concatenar_claves, cadena4);
     print_test("Prueba abb cadena concatenada inorder es 'adehklqstuvwz'", !strcmp(cadena4, "adehklqstuvwz"));
 
-    print_test("Prueba abb borrar 't'", abb_borrar(abb, "t") == &i);
+    print_test("Prueba abb borrar elemento 't' con dos hijos", abb_borrar(abb, "t") == &i);
     print_test("Prueba abb la cantidad de elementos es 12", abb_cantidad(abb) == 12);
     abb_in_order(abb, concatenar_claves, cadena5);
     print_test("Prueba abb cadena concatenada inorder es 'adehklqsuvwz'", !strcmp(cadena5, "adehklqsuvwz"));
+
+    abb_destruir(abb);    
+}
+
+static void prueba_abb_valor_null(){
+
+    printf("- PRUEBAS ABB VALOR NULL\n");
+    abb_t* abb = abb_crear(strcmp, NULL);
+    char *clave = "", *valor = NULL;
+
+    /* Inserta 1 valor y luego lo borra */
+    print_test("Prueba abb insertar clave vacia valor NULL", abb_guardar(abb, clave, valor));
+    print_test("Prueba abb la cantidad de elementos es 1", abb_cantidad(abb) == 1);
+    print_test("Prueba abb obtener clave vacia es valor NULL", abb_obtener(abb, clave) == valor);
+    print_test("Prueba abb pertenece clave vacia, es true", abb_pertenece(abb, clave));
+    print_test("Prueba abb borrar clave vacia, es valor NULL", abb_borrar(abb, clave) == valor);
+    print_test("Prueba abb la cantidad de elementos es 0", abb_cantidad(abb) == 0);
+
+    abb_destruir(abb);
+}
+
+
+static void prueba_abb_volumen(size_t largo){
+
+    printf("- PRUEBAS ABB VOLUMEN\n");
+    abb_t* abb = abb_crear(strcmp, NULL);
+
+    const size_t largo_clave = 10;
+    char (*claves)[largo_clave] = malloc(largo * largo_clave);
+
+    unsigned* valores[largo];
+
+    /* Inserta 'largo' parejas en el abb */
+    bool ok = true;
+    for(unsigned i = 0; i < largo; i++) {
+        valores[i] = malloc(sizeof(int));
+        sprintf(claves[i], "%08d", i);
+        *valores[i] = i;
+        ok = abb_guardar(abb, claves[i], valores[i]);
+        if(!ok) break;
+    }
+
+    print_test("Prueba abb almacenar muchos elementos", ok);
+    print_test("Prueba abb la cantidad de elementos es correcta", abb_cantidad(abb) == largo);
+
+    /* Verifica que devuelva los valores correctos */
+    for(size_t i = 0; i < largo; i++) {
+        ok = abb_pertenece(abb, claves[i]);
+        if(!ok) break;
+        ok = abb_obtener(abb, claves[i]) == valores[i];
+        if(!ok) break;
+    }
+
+    print_test("Prueba abb pertenece y obtener muchos elementos", ok);
+    print_test("Prueba abb la cantidad de elementos es correcta", abb_cantidad(abb) == largo);
+
+    /* Verifica que borre y devuelva los valores correctos */
+    for(size_t i = 0; i < largo; i++) {
+        ok = abb_borrar(abb, claves[i]) == valores[i];
+        if(!ok) break;
+    }
+
+    print_test("Prueba abb borrar muchos elementos", ok);
+    print_test("Prueba abb la cantidad de elementos es 0", abb_cantidad(abb) == 0);
+
+    /* Destruye el abb y crea uno nuevo que sí libera */
+    abb_destruir(abb);
+    abb = abb_crear(strcmp, free);
+
+    /* Inserta 'largo' parejas en el abb */
+    ok = true;
+    for (size_t i = 0; i < largo; i++) {
+        ok = abb_guardar(abb, claves[i], valores[i]);
+        if (!ok) break;
+    }
+
+    free(claves);
+
+    /* Destruye el abb - debería liberar los enteros */
+    abb_destruir(abb);
+}
+
+void pila_destruir_wrapper(void *pila){
+    pila_destruir((pila_t*)pila);
+}
+
+static void prueba_abb_funcion_destruir(void){
+
+    printf("- PRUEBAS ABB FUNCION DESTRUIR (PILA_DESTRUIR)\n");
+    abb_t* abb = abb_crear(strcmp, pila_destruir_wrapper);
+    size_t largo = 10;
+
+    const size_t largo_clave = 10;
+    char (*claves)[largo_clave] = malloc(largo * largo_clave);
+
+    pila_t *pila = NULL;
+
+    /* Inserta 'largo' parejas en el abb */
+    bool ok = true;
+    for(unsigned i = 0; i < largo; i++) {
+        pila = pila_crear();
+        sprintf(claves[i], "%08d", i);
+        ok = abb_guardar(abb, claves[i], pila);
+        if(!ok) break;
+    }
+
+    print_test("Prueba abb almacenar varias pilas", ok);
+    print_test("Prueba abb la cantidad de pilas almacenadas es correcta", abb_cantidad(abb) == largo);
+    print_test("Prueba abb destruir con funcion de destruccion pila_destruir", true);
+
+    /* Destruye el abb con funcion pila_destruir */
+    abb_destruir(abb);
+    free(claves);
+}
+
+static void prueba_abb_borrar_sin_hijos(){
+ 
+    char *letra_a = "a";
+    char *letra_b = "b";
+    char *letra_c = "c";
+
+    printf("- PRUEBAS ABB BORRAR SIN HIJOS\n");
+    abb_t* abb = abb_crear(strcmp, NULL);
+
+    bool ok = true;
+    ok &= abb_guardar(abb, letra_b, NULL);
+    ok &= abb_guardar(abb, letra_a, NULL);
+    ok &= abb_guardar(abb, letra_c, NULL);
+
+    print_test("Prueba abb se guardaron todos los elementos correctamente", ok);
+    print_test("Prueba abb la cantidad de elementos es 3", abb_cantidad(abb) == 3);
+    print_test("Prueba abb borrar elemento 'a' sin hijos", !abb_borrar(abb, "a"));
+    print_test("Prueba abb la cantidad de elementos es 2", abb_cantidad(abb) == 2);
+    print_test("Prueba abb borrar elemento 'c' sin hijos", !abb_borrar(abb, "c"));
+    print_test("Prueba abb la cantidad de elementos es 1", abb_cantidad(abb) == 1);
+
+    abb_destruir(abb);    
+}
+
+static void prueba_abb_borrar_un_hijo(){
+ 
+    char *letra_d = "d";
+    char *letra_b = "b";
+    char *letra_f = "f";
+    char *letra_c = "c";
+    char *letra_e = "e";
+
+    printf("- PRUEBAS ABB BORRAR CON UN HIJO\n");
+    abb_t* abb = abb_crear(strcmp, NULL);
+
+    bool ok = true;
+    ok &= abb_guardar(abb, letra_d, NULL);
+    ok &= abb_guardar(abb, letra_b, NULL);
+    ok &= abb_guardar(abb, letra_f, NULL);
+    ok &= abb_guardar(abb, letra_c, NULL);
+    ok &= abb_guardar(abb, letra_e, NULL);
+
+    print_test("Prueba abb se guardaron todos los elementos correctamente", ok);
+    print_test("Prueba abb la cantidad de elementos es 5", abb_cantidad(abb) == 5);
+    print_test("Prueba abb borrar elemento 'b' con un hijo", !abb_borrar(abb, "b"));
+    print_test("Prueba abb la cantidad de elementos es 4", abb_cantidad(abb) == 4);
+    print_test("Prueba abb borrar elemento 'f' con un hijo", !abb_borrar(abb, "f"));
+    print_test("Prueba abb la cantidad de elementos es 3", abb_cantidad(abb) == 3);
 
     abb_destruir(abb);    
 }
@@ -337,10 +501,15 @@ void pruebas_abb_estudiante() {
     prueba_abb_insertar();
     prueba_abb_reemplazar();
     prueba_abb_reemplazar_con_destruir();
-    prueba_abb_borrar();
-    prueba_abb_iterar();
-    prueba_abb_iterar_volumen(500);
+    prueba_abb_funcion_destruir();
+    prueba_abb_borrar_sin_hijos();
+    prueba_abb_borrar_un_hijo();
+    prueba_abb_borrar_dos_hijos();
+    prueba_abb_valor_null();
+    prueba_abb_volumen(5000);
     prueba_abb_iterador_interno();
+    prueba_abb_iterar();
+    prueba_abb_iterar_volumen(5000);
 }
 
 /*
